@@ -22,17 +22,6 @@ jobs:
         with:
           node-version: 20
 
-      - name: Preserve current story and restore source
-        shell: bash
-        run: |
-          if [ -f public/story.generated.json ]; then
-            cp public/story.generated.json /tmp/story.generated.json
-          fi
-          node scripts/restore-project.mjs
-          if [ -f /tmp/story.generated.json ]; then
-            cp /tmp/story.generated.json public/story.generated.json
-          fi
-
       - name: Generate this hour's story
         run: node scripts/generate-story.mjs
 
