@@ -1,0 +1,50 @@
+name: Grow AutoRPG story
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: autorpg-hourly-story
+  cancel-in-progress: false
+
+jobs:
+  grow-story:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Preserve current story and restore source
+        shell: bash
+        run: |
+          if [ -f public/story.generated.json ]; then
+            cp public/story.generated.json /tmp/story.generated.json
+          fi
+          node scripts/restore-project.mjs
+          if [ -f /tmp/story.generated.json ]; then
+            cp /tmp/story.generated.json public/story.generated.json
+          fi
+
+      - name: Generate this hour's story
+        run: node scripts/generate-story.mjs
+
+      - name: Commit the new story
+        shell: bash
+        run: |
+          git config user.name "AutoRPG Story Engine"
+          git config user.email "actions@users.noreply.github.com"
+          git add public/story.generated.json
+          if git diff --cached --quiet; then
+            echo "No story update for this hour."
+            exit 0
+          fi
+          git commit -m "story: grow the hourly timeline"
+          git push
