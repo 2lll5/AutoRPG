@@ -1,13 +1,13 @@
 {
   "name": "starfall-crown-rpg",
-  "version": "4.3.0",
+  "version": "4.3.1",
   "private": true,
   "scripts": {
-    "dev": "node .modern-update/restore.mjs && node scripts/apply-story-coherence.mjs && next dev",
-    "build": "node .modern-update/restore.mjs && node scripts/apply-story-coherence.mjs && node scripts/generate-story.mjs && next build",
+    "dev": "node .modern-update/restore.mjs && node scripts/apply-story-coherence.mjs && node scripts/fix-runtime-action-bindings.mjs && next dev",
+    "build": "node .modern-update/restore.mjs && node scripts/apply-story-coherence.mjs && node scripts/fix-runtime-action-bindings.mjs && node scripts/generate-story.mjs && next build",
     "start": "next start",
-    "lint": "node .modern-update/restore.mjs && node scripts/apply-story-coherence.mjs && next lint",
-    "story:generate": "node .modern-update/restore.mjs && node scripts/apply-story-coherence.mjs && node scripts/generate-story.mjs"
+    "lint": "node .modern-update/restore.mjs && node scripts/apply-story-coherence.mjs && node scripts/fix-runtime-action-bindings.mjs && next lint",
+    "story:generate": "node .modern-update/restore.mjs && node scripts/apply-story-coherence.mjs && node scripts/fix-runtime-action-bindings.mjs && node scripts/generate-story.mjs"
   },
   "dependencies": {
     "next": "15.5.9",
