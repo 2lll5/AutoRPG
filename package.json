@@ -1,14 +1,13 @@
 {
   "name": "starfall-crown-rpg",
-  "version": "4.0.1",
+  "version": "4.1.0",
   "private": true,
   "scripts": {
-    "prepare:world": "node .fantasy-update/restore.mjs",
-    "dev": "npm run prepare:world && next dev",
-    "build": "npm run prepare:world && next build",
+    "dev": "next dev",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "story:generate": "npm run prepare:world && node scripts/generate-story.mjs"
+    "story:generate": "node scripts/generate-story.mjs"
   },
   "dependencies": {
     "next": "15.5.9",
