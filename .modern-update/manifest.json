@@ -1,0 +1,13 @@
+{
+  "sha256": "745d6dc064aea77b5cd6ceb6c141610f12af228e98bf3e4d06aa9d9b84d75e68",
+  "parts": 7,
+  "paths": [
+    "lib/story.js",
+    "lib/runtimeStory.js",
+    "components/Game.jsx",
+    "scripts/generate-story.mjs",
+    "app/layout.js",
+    "app/globals.css"
+  ],
+  "bytes": 119374
+}
