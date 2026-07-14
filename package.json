@@ -1,13 +1,13 @@
 {
   "name": "starfall-crown-rpg",
-  "version": "4.1.1",
+  "version": "4.2.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "node scripts/merge-story-tides.mjs && node scripts/generate-story.mjs && next build",
+    "dev": "node .modern-update/restore.mjs && next dev",
+    "build": "node .modern-update/restore.mjs && node scripts/generate-story.mjs && next build",
     "start": "next start",
-    "lint": "next lint",
-    "story:generate": "node scripts/merge-story-tides.mjs && node scripts/generate-story.mjs"
+    "lint": "node .modern-update/restore.mjs && next lint",
+    "story:generate": "node .modern-update/restore.mjs && node scripts/generate-story.mjs"
   },
   "dependencies": {
     "next": "15.5.9",
