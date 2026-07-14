@@ -22,8 +22,8 @@ jobs:
         with:
           node-version: 20
 
-      - name: Restore the sword-and-sorcery world
-        run: tar -xzf .fantasy-update/update.tar.gz
+      - name: Restore the verified sword-and-sorcery world
+        run: node .fantasy-update/restore.mjs
 
       - name: Generate this hour's fantasy event layer
         run: node scripts/generate-story.mjs
