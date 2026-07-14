@@ -1,9 +1,9 @@
 {
   "name": "starfall-crown-rpg",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "private": true,
   "scripts": {
-    "prepare:world": "tar -xzf .fantasy-update/update.tar.gz",
+    "prepare:world": "node .fantasy-update/restore.mjs",
     "dev": "npm run prepare:world && next dev",
     "build": "npm run prepare:world && next build",
     "start": "next start",
