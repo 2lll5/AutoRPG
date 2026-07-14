@@ -19,9 +19,10 @@ if (fs.existsSync(bootstrapDir)) {
     .sort()
     .map((name) => fs.readFileSync(path.join(bootstrapDir, name), "utf8"));
 } else {
+  const archiveCommit = "0debeeacc47fa53fddaa561ce6869933feffba00";
   for (let index = 0; index < 5; index += 1) {
     const name = `part${String(index).padStart(2, "0")}`;
-    const url = `https://raw.githubusercontent.com/2lll5/AutoRPG/main/.bootstrap/${name}`;
+    const url = `https://raw.githubusercontent.com/2lll5/AutoRPG/${archiveCommit}/.bootstrap/${name}`;
     const response = await fetch(url);
     if (!response.ok) throw new Error(`Unable to download ${name}: ${response.status}`);
     parts.push(await response.text());
