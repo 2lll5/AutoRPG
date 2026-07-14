@@ -1,0 +1,66 @@
+name: Hourly Story Refresh
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/hourly-story-refresh.yml
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    if: github.event.head_commit.message != 'chore: generate hourly story epoch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Restore canonical novel sources
+        run: node .modern-update/restore.mjs
+      - name: Generate current Taipei-hour epoch
+        env:
+          TZ: Asia/Taipei
+        run: node scripts/generate-story.mjs
+      - name: Repack canonical modern source bundle
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const crypto = require('crypto');
+          const zlib = require('zlib');
+          const path = require('path');
+          const manifestPath = '.modern-update/manifest.json';
+          const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+          const files = {};
+          for (const relativePath of manifest.paths) files[relativePath] = fs.readFileSync(relativePath, 'utf8');
+          const raw = Buffer.from(JSON.stringify(files));
+          const encoded = zlib.gzipSync(raw, { level: 9 }).toString('base64');
+          const partSize = Math.ceil(encoded.length / manifest.parts);
+          fs.mkdirSync('.modern-update/parts', { recursive: true });
+          for (let i = 0; i < manifest.parts; i += 1) {
+            fs.writeFileSync(path.join('.modern-update/parts', `part${String(i).padStart(2, '0')}`), encoded.slice(i * partSize, (i + 1) * partSize) + '\n');
+          }
+          manifest.sha256 = crypto.createHash('sha256').update(raw).digest('hex');
+          manifest.bytes = raw.length;
+          manifest.syncedAt = new Date().toISOString();
+          fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
+          NODE
+      - name: Validate canonical restore and story JSON
+        run: |
+          node .modern-update/restore.mjs
+          node -e "const d=require('./public/story.generated.json'); if(d.schema!==4||!Array.isArray(d.epochs)||!d.epochs.length) process.exit(1); console.log({finalized:d.finalized, depth:d.epochs.length, latest:d.epochs.at(-1).id})"
+      - name: Commit generated epoch and canonical bundle
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add public/story.generated.json .modern-update
+          if git diff --cached --quiet; then
+            echo "No story change required"
+            exit 0
+          fi
+          git commit -m "chore: generate hourly story epoch"
+          git push
