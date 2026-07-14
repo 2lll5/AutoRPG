@@ -1,4 +1,4 @@
-name: Grow AutoRPG story
+name: Grow Starfall Crown world
 
 on:
   schedule:
@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: autorpg-hourly-story
+  group: starfall-crown-hourly-story
   cancel-in-progress: false
 
 jobs:
@@ -22,18 +22,21 @@ jobs:
         with:
           node-version: 20
 
-      - name: Generate this hour's story
+      - name: Restore the sword-and-sorcery world
+        run: tar -xzf .fantasy-update/update.tar.gz
+
+      - name: Generate this hour's fantasy event layer
         run: node scripts/generate-story.mjs
 
-      - name: Commit the new story
+      - name: Commit the new world event layer
         shell: bash
         run: |
-          git config user.name "AutoRPG Story Engine"
+          git config user.name "Starfall Crown Storyteller"
           git config user.email "actions@users.noreply.github.com"
           git add public/story.generated.json
           if git diff --cached --quiet; then
-            echo "No story update for this hour."
+            echo "No world event update for this hour."
             exit 0
           fi
-          git commit -m "story: grow the hourly timeline"
+          git commit -m "story: expand the sword-and-sorcery world"
           git push
