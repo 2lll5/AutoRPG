@@ -1,5 +1,6 @@
 name: Apply sword and sorcery rewrite
 
+# Existing workflow update intentionally triggers the one-time rewrite.
 on:
   push:
     branches: [main]
