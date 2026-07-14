@@ -69,6 +69,22 @@ const POOLS = {
     "王女的真實身分會被所有勢力得知",
     "隊伍必須在救治傷者與追擊敵人之間做出不可逆選擇",
     "深淵王冠將取得一件能跨越封印的聖物"
+  ],
+  approaches: [
+    "循古龍火脈穿過崩裂地宮，以真名交換一條不受追兵察覺的道路",
+    "護送傷者沿霜狼舊獵徑撤向北境石門，並尋求狼王血誓的庇護",
+    "潛入月蝕市場追查王冠代理人，在拍賣鐘響前奪回被封印的聖物",
+    "返回星落聖堂重整盟誓，讓盲眼祭司以星光辨認隊伍中的叛誓者",
+    "登上黑曜鐘樓敲響逆序鐘聲，迫使亡者記憶離開活人的軀體",
+    "追隨王女密信前往灰燼花園，查明百年前誓約仍在運作的原因"
+  ],
+  costs: [
+    "持劍者失去一段與同行者相識的記憶",
+    "一件聖物暫時沉睡，直到完成新的血誓",
+    "隊伍必須留下可靠的同行者斷後",
+    "黑色傷紋加深，下一次施展禁咒將付出壽命",
+    "王女身分暴露給其中一個敵對勢力",
+    "古龍將要求隊伍日後償還一項不可拒絕的承諾"
   ]
 };
 
@@ -104,6 +120,20 @@ function sample(pool, seed, count, stride) {
   return result;
 }
 
+function makeVariants(seed, finale) {
+  return [0, 1, 2].map((branch) => ({
+    branch,
+    intent: finale
+      ? ["守住仍願同行的人並封印王冠", "以王女星血重寫古龍誓約", "犧牲聖物斬斷深淵王冠的繼承"][branch]
+      : POOLS.approaches[(seed + branch * 5) % POOLS.approaches.length],
+    cost: POOLS.costs[((seed >>> 3) + branch * 7) % POOLS.costs.length],
+    continuityRule: "從父路徑實際 location、companions、artifacts、injuries、oaths、enemies 與 unresolvedThreads 推導，不得重置狀態",
+    outcomeRule: finale
+      ? "依父路徑累積選擇產生專屬結局，結清主要誓約與未解事件"
+      : "產生只屬於該父路徑的結果，並留下至少一項可延續的新後果"
+  }));
+}
+
 function makeEpoch(date, sequence, finale = false) {
   const key = hourKey(date);
   const seed = hashInt(`${key}:${sequence}:${finale ? "finale" : "tide"}`);
@@ -123,7 +153,9 @@ function makeEpoch(date, sequence, finale = false) {
     expansion: {
       mode: "per-parent-three-children",
       childCount: 3,
-      continuity: ["location", "companions", "artifacts", "injuries", "oaths", "enemies", "unresolvedThreads"]
+      uniquenessScope: "parent-path",
+      continuity: ["location", "companions", "artifacts", "injuries", "oaths", "enemies", "unresolvedThreads"],
+      variants: makeVariants(seed, finale)
     }
   };
 }
@@ -142,6 +174,13 @@ if (data.schema !== 3 || !Array.isArray(data.epochs)) {
   data = { schema: 3, generatedAt: null, finalized: false, entryEpochId: null, epochs: [] };
 }
 
+data.worldState ||= {
+  title: "星蝕王冠",
+  genre: "劍與魔法",
+  latestDepth: 0,
+  continuity: ["location", "companions", "artifacts", "injuries", "oaths", "enemies", "unresolvedThreads"]
+};
+
 if (data.finalized || now > FINAL_DEADLINE) {
   console.log("World feed already finalized; no changes.");
   process.exit(0);
@@ -158,6 +197,7 @@ const epoch = makeEpoch(now, data.epochs.length + 1, finale);
 data.epochs.push(epoch);
 data.entryEpochId ||= epoch.id;
 data.generatedAt = now.toISOString();
+data.worldState.latestDepth = Math.max(Number(data.worldState.latestDepth) || 0, data.epochs.length);
 if (finale) data.finalized = true;
 
 await fs.writeFile(FILE, `${JSON.stringify(data, null, 2)}\n`, "utf8");
