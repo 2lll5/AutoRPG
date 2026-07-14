@@ -170,8 +170,8 @@ try {
   data = {};
 }
 
-if (data.schema !== 3 || !Array.isArray(data.epochs)) {
-  data = { schema: 3, generatedAt: null, finalized: false, entryEpochId: null, epochs: [] };
+if (data.schema !== 4 || !Array.isArray(data.epochs)) {
+  data = { schema: 4, generatedAt: null, finalized: false, entryEpochId: null, epochs: [] };
 }
 
 data.worldState ||= {
