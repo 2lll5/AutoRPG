@@ -1,20 +1,33 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CORE_STORY, STAT_META, getDominantRoute, routeLabel } from "../lib/story";
+import {
+  CORE_NODES,
+  START_NODE_ID,
+  STAT_META,
+  getDominantRoute,
+  resolveChoiceResult,
+  routeLabel,
+} from "../lib/story";
 
-const COOKIE_NAME = "autorpg_state";
+const COOKIE_NAME = "autorpg_state_v2";
+const LEGACY_COOKIE_NAME = "autorpg_state";
 const LOOP_COOKIE = "autorpg_loops";
-const INITIAL = {
-  chapter: 0,
-  choices: "",
-  stats: { nerve: 0, insight: 0, empathy: 0 },
-  flags: [],
-  items: [],
-  flagCount: 0,
-  itemCount: 0,
-  result: null,
-};
+const LIVE_PREFIX = "$live:";
+
+function createInitialState() {
+  return {
+    currentNodeId: START_NODE_ID,
+    choices: "",
+    history: [START_NODE_ID],
+    stats: { nerve: 0, insight: 0, empathy: 0 },
+    flags: [],
+    items: [],
+    flagCount: 0,
+    itemCount: 0,
+    result: null,
+  };
+}
 
 function readCookie(name) {
   if (typeof document === "undefined") return null;
@@ -46,13 +59,13 @@ function decodeState(value) {
 
 function ProceduralArt({ scene, accent, seed, secretClicks, onSecret }) {
   const points = useMemo(() => {
-    let n = [...String(seed)].reduce((sum, c) => sum + c.charCodeAt(0), 0);
-    return Array.from({ length: 26 }, (_, i) => {
-      n = (n * 9301 + 49297 + i) % 233280;
+    let n = [...String(seed)].reduce((sum, char) => sum + char.charCodeAt(0), 0);
+    return Array.from({ length: 28 }, (_, index) => {
+      n = (n * 9301 + 49297 + index) % 233280;
       const x = 3 + (n / 233280) * 94;
-      n = (n * 9301 + 49297 + i * 2) % 233280;
+      n = (n * 9301 + 49297 + index * 2) % 233280;
       const y = 4 + (n / 233280) * 60;
-      return { x, y, r: i % 5 === 0 ? 1.5 : 0.7 };
+      return { x, y, r: index % 5 === 0 ? 1.5 : 0.7 };
     });
   }, [seed]);
 
@@ -80,24 +93,24 @@ function ProceduralArt({ scene, accent, seed, secretClicks, onSecret }) {
             <stop offset="1" stopColor={palette[0]} stopOpacity="0" />
           </radialGradient>
           <linearGradient id={`ground-${seed}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor={palette[1]} stopOpacity="0.6" />
+            <stop offset="0" stopColor={palette[1]} stopOpacity="0.62" />
             <stop offset="1" stopColor="#05060d" />
           </linearGradient>
         </defs>
         <rect width="1000" height="600" fill={`url(#sky-${seed})`} />
-        {points.map((p, i) => <circle key={i} cx={p.x * 10} cy={p.y * 6} r={p.r * 2} fill="#fff" opacity={0.3 + (i % 4) * 0.15} />)}
+        {points.map((point, index) => (
+          <circle key={index} cx={point.x * 10} cy={point.y * 6} r={point.r * 2} fill="#fff" opacity={0.3 + (index % 4) * 0.15} />
+        ))}
         <circle cx="790" cy="125" r={secretClicks >= 7 ? 94 : 68} fill={`url(#moon-${seed})`} opacity="0.9" />
         <circle cx="790" cy="125" r="45" fill="#eff5ff" opacity="0.88" />
         <path d="M0 450 L120 355 L210 405 L320 290 L410 388 L520 245 L620 360 L730 270 L835 370 L1000 285 L1000 600 L0 600 Z" fill={`url(#ground-${seed})`} />
         <g opacity="0.86">
-          {Array.from({ length: 14 }, (_, i) => {
-            const w = 42 + (i % 4) * 18;
-            const h = 85 + ((i * 37) % 190);
-            const x = i * 78 - 18;
-            return <rect key={i} x={x} y={475 - h} width={w} height={h} rx="3" fill="#090b16" stroke={i % 3 === 0 ? palette[0] : "#222945"} strokeWidth="2" />;
+          {Array.from({ length: 14 }, (_, index) => {
+            const width = 42 + (index % 4) * 18;
+            const height = 85 + ((index * 37) % 190);
+            return <rect key={index} x={index * 78 - 18} y={475 - height} width={width} height={height} rx="3" fill="#090b16" stroke={index % 3 === 0 ? palette[0] : "#222945"} strokeWidth="2" />;
           })}
         </g>
-        {Array.from({ length: 30 }, (_, i) => <rect key={i} x={20 + (i % 15) * 64} y={326 + Math.floor(i / 15) * 70 + (i % 3) * 9} width="8" height="13" fill={palette[0]} opacity={i % 4 === 0 ? 0.85 : 0.25} />)}
         <path d="M500 270 L526 340 L596 342 L540 384 L560 455 L500 414 L440 455 L460 384 L404 342 L474 340 Z" fill="none" stroke={palette[0]} strokeWidth="5" opacity="0.7" />
         <circle cx="500" cy="378" r="58" fill="#060812" stroke={palette[0]} strokeWidth="3" />
         <path d="M500 325 L500 378 L540 405" fill="none" stroke="#fff" strokeWidth="5" strokeLinecap="round" />
@@ -112,9 +125,18 @@ function ProceduralArt({ scene, accent, seed, secretClicks, onSecret }) {
   );
 }
 
+function normalizeGenerated(data) {
+  if (!data || !Array.isArray(data.nodes)) return { nodes: [], entrypoints: {}, finalized: false };
+  return {
+    nodes: data.nodes,
+    entrypoints: data.entrypoints || {},
+    finalized: Boolean(data.finalized),
+  };
+}
+
 export default function Game() {
-  const [generated, setGenerated] = useState([]);
-  const [state, setState] = useState(INITIAL);
+  const [generated, setGenerated] = useState({ nodes: [], entrypoints: {}, finalized: false });
+  const [state, setState] = useState(createInitialState);
   const [ready, setReady] = useState(false);
   const [showRestart, setShowRestart] = useState(false);
   const [showArchive, setShowArchive] = useState(false);
@@ -124,13 +146,20 @@ export default function Game() {
 
   useEffect(() => {
     const saved = decodeState(readCookie(COOKIE_NAME) || "");
+    const legacy = decodeState(readCookie(LEGACY_COOKIE_NAME) || "");
     const loopValue = Number(readCookie(LOOP_COOKIE) || 0);
-    if (saved?.stats && typeof saved.chapter === "number") setState({ ...INITIAL, ...saved });
+
+    if (saved?.currentNodeId && saved?.stats) {
+      setState({ ...createInitialState(), ...saved });
+    } else if (legacy?.stats) {
+      setToast("故事已升級為真正的樹狀結構；舊線性存檔已保留為重啟紀錄，旅程從根節點重新開始。");
+    }
+
     setLoops(loopValue);
     fetch(`https://raw.githubusercontent.com/2lll5/AutoRPG/main/public/story.generated.json?t=${Date.now()}`, { cache: "no-store" })
-      .then((r) => r.json())
-      .then((data) => setGenerated(Array.isArray(data.episodes) ? data.episodes : []))
-      .catch(() => setGenerated([]))
+      .then((response) => response.json())
+      .then((data) => setGenerated(normalizeGenerated(data)))
+      .catch(() => setGenerated({ nodes: [], entrypoints: {}, finalized: false }))
       .finally(() => setReady(true));
   }, []);
 
@@ -145,8 +174,8 @@ export default function Game() {
       sequence.push(event.key.toLowerCase());
       if (sequence.length > 10) sequence.shift();
       if (sequence.join(",") === "arrowup,arrowup,arrowdown,arrowdown,arrowleft,arrowright,arrowleft,arrowright,b,a") {
-        setToast("彩蛋解鎖：你輸入了古老的勇者密碼。空白硬幣 +1");
-        setState((s) => ({ ...s, items: [...new Set([...s.items, "勇者密碼硬幣"])] }));
+        setToast("彩蛋解鎖：勇者密碼讓你取得一枚不被故事樹記錄的空白硬幣。");
+        setState((current) => ({ ...current, items: [...new Set([...current.items, "勇者密碼硬幣"])] }));
       }
     };
     window.addEventListener("keydown", onKey);
@@ -155,24 +184,38 @@ export default function Game() {
 
   useEffect(() => {
     if (!toast) return;
-    const timer = setTimeout(() => setToast(""), 3600);
+    const timer = setTimeout(() => setToast(""), 4200);
     return () => clearTimeout(timer);
   }, [toast]);
 
-  const episodes = useMemo(() => [...CORE_STORY, ...generated], [generated]);
-  const current = episodes[Math.min(state.chapter, Math.max(episodes.length - 1, 0))];
-  const route = getDominantRoute(state.stats);
-  const routeText = current?.routeText?.[route] || current?.routeText?.balanced || "你的選擇正在改變這段故事。";
-  const isWaiting = ready && state.chapter >= episodes.length;
+  const allNodes = useMemo(() => [...CORE_NODES, ...generated.nodes], [generated.nodes]);
+  const nodeMap = useMemo(() => new Map(allNodes.map((node) => [node.id, node])), [allNodes]);
 
-  const choose = (choice, choiceIndex) => {
+  const resolveNodeId = (nodeId) => {
+    if (!nodeId?.startsWith(LIVE_PREFIX)) return nodeId;
+    return generated.entrypoints[nodeId.slice(LIVE_PREFIX.length)] || nodeId;
+  };
+
+  const resolvedCurrentId = resolveNodeId(state.currentNodeId);
+  const current = nodeMap.get(resolvedCurrentId);
+  const route = getDominantRoute(state.stats);
+  const routeText = current?.routeText?.[route] || current?.routeText?.balanced || "你的過往選擇正在改變這個節點。";
+  const memoryEcho = current?.echoes
+    ? Object.entries(current.echoes).find(([key]) => state.flags.includes(key) || state.items.includes(key))?.[1]
+    : null;
+  const isWaiting = ready && !current;
+
+  const choose = (choiceData, choiceIndex) => {
     if (state.result) return;
     const nextStats = { ...state.stats };
-    Object.entries(choice.effects || {}).forEach(([key, value]) => { nextStats[key] = (nextStats[key] || 0) + value; });
-    const hasNewFlag = Boolean(choice.flag && !state.flags.includes(choice.flag));
-    const hasNewItem = Boolean(choice.item && !state.items.includes(choice.item));
-    const nextFlags = choice.flag ? [...new Set([...state.flags, choice.flag])].slice(-36) : state.flags;
-    const nextItems = choice.item ? [...new Set([...state.items, choice.item])].slice(-24) : state.items;
+    Object.entries(choiceData.effects || {}).forEach(([key, value]) => {
+      nextStats[key] = (nextStats[key] || 0) + value;
+    });
+    const hasNewFlag = Boolean(choiceData.flag && !state.flags.includes(choiceData.flag));
+    const hasNewItem = Boolean(choiceData.item && !state.items.includes(choiceData.item));
+    const nextFlags = choiceData.flag ? [...new Set([...state.flags, choiceData.flag])].slice(-48) : state.flags;
+    const nextItems = choiceData.item ? [...new Set([...state.items, choiceData.item])].slice(-32) : state.items;
+
     setState({
       ...state,
       stats: nextStats,
@@ -180,88 +223,115 @@ export default function Game() {
       items: nextItems,
       flagCount: state.flagCount + (hasNewFlag ? 1 : 0),
       itemCount: state.itemCount + (hasNewItem ? 1 : 0),
-      choices: `${state.choices}${choiceIndex}`,
-      result: choice.result,
+      choices: `${state.choices}${choiceIndex}`.slice(-80),
+      result: {
+        text: resolveChoiceResult(choiceData, state),
+        next: choiceData.next,
+      },
     });
   };
 
-  const advance = () => setState((s) => ({ ...s, chapter: s.chapter + 1, result: null }));
+  const advance = () => {
+    if (!state.result?.next) return;
+    const nextId = state.result.next;
+    setState((currentState) => ({
+      ...currentState,
+      currentNodeId: nextId,
+      history: [...currentState.history, nextId].slice(-48),
+      result: null,
+    }));
+  };
 
   const restart = () => {
     const nextLoops = loops + 1;
     writeCookie(LOOP_COOKIE, String(nextLoops));
     setLoops(nextLoops);
-    setState(INITIAL);
+    setState(createInitialState());
     setShowRestart(false);
-    setToast(nextLoops === 3 ? "彩蛋：第三次重來後，鐘塔開始記得你。" : "迴圈已重啟。這次也許會看見不同的真相。" );
+    setToast(nextLoops === 3 ? "彩蛋：第三次重來後，根節點多了一道只有鐘塔記得的裂縫。" : "故事樹已回到根節點；這次選另一條路，第二幕就會完全不同。" );
   };
 
   const investigateMoon = () => {
     const next = secretClicks + 1;
     setSecretClicks(next);
     if (next === 7) {
-      setToast("隱藏彩蛋：月亮其實是第七扇門。獲得「月背鑰匙」。");
-      setState((s) => ({ ...s, items: [...new Set([...s.items, "月背鑰匙"])] }));
+      setToast("隱藏彩蛋：月亮其實是沒有連線的第七扇門。獲得「月背鑰匙」。");
+      setState((currentState) => ({ ...currentState, items: [...new Set([...currentState.items, "月背鑰匙"])] }));
     }
   };
 
-  if (!ready) return <main className="loading-screen"><div className="loader" /><p>正在讀取零時檔案…</p></main>;
+  if (!ready) return <main className="loading-screen"><div className="loader" /><p>正在讀取故事樹…</p></main>;
 
   return (
     <main className="game-shell">
       <div className="noise" />
       <header className="topbar">
         <div>
-          <span className="eyebrow">AUTO RPG / LIVE STORY</span>
+          <span className="eyebrow">AUTO RPG / BRANCHING STORY GRAPH</span>
           <h1>零時迴圈</h1>
         </div>
         <div className="header-actions">
-          <button className="ghost-button" onClick={() => setShowArchive(true)}>旅程紀錄</button>
+          <button className="ghost-button" onClick={() => setShowArchive(true)}>路徑紀錄</button>
           <button className="danger-button" onClick={() => setShowRestart(true)}>重新開始</button>
         </div>
       </header>
 
-      <section className="progress-wrap" aria-label="故事進度">
-        <div className="progress-meta"><span>目前章節 {Math.min(state.chapter + 1, episodes.length)} / {episodes.length}</span><span>每小時新增故事 · 7/31 收尾</span></div>
-        <div className="progress-track"><span style={{ width: `${Math.min(100, ((state.chapter + (state.result ? 0.5 : 0)) / Math.max(episodes.length, 1)) * 100)}%` }} /></div>
+      <section className="progress-wrap" aria-label="故事路徑深度">
+        <div className="progress-meta">
+          <span>已走過 {Math.max(0, state.history.length - 1)} 個故事節點</span>
+          <span>樹狀分支 · 可交織 · 多重結局</span>
+        </div>
+        <div className="progress-track"><span style={{ width: `${Math.min(100, (state.history.length / 12) * 100)}%` }} /></div>
       </section>
 
       {isWaiting ? (
         <section className="waiting-card">
           <div className="waiting-orbit"><span /></div>
-          <span className="eyebrow">THE STORY IS STILL GROWING</span>
-          <h2>你已抵達目前最新的整點</h2>
-          <p>下一段故事會在 GitHub Actions 的下一次每小時更新後出現。你的 Cookie 存檔已保留，重新整理即可繼續。</p>
-          <button className="primary-button" onClick={() => location.reload()}>檢查新章節</button>
+          <span className="eyebrow">UNWRITTEN BRANCH</span>
+          <h2>你抵達了一個尚未生成的分支</h2>
+          <p>目前路徑已指向「{state.currentNodeId}」。GitHub Actions 每小時會同時新增三個不同節點；更新後重新整理即可沿原路繼續，不會被送回共同的下一幕。</p>
+          <button className="primary-button" onClick={() => location.reload()}>檢查新分支</button>
         </section>
       ) : current ? (
         <div className="game-grid">
           <section className="story-panel">
             <ProceduralArt scene={current.scene} accent={current.accent} seed={current.id} secretClicks={secretClicks} onSecret={investigateMoon} />
             <article className="story-card">
-              <div className="chapter-line"><span>{current.releaseAt ? "整點新增章節" : "主線檔案"}</span><span>{routeLabel(route)}</span></div>
+              <div className="chapter-line">
+                <span>{current.ending ? "路線結局" : current.releaseAt ? "整點生成節點" : "故事樹節點"}</span>
+                <span>{current.endingCode || routeLabel(route)}</span>
+              </div>
               <h2>{current.title}</h2>
               <p className="subtitle">{current.subtitle}</p>
               <p className="story-copy">{current.intro}</p>
-              <div className="route-note"><span>路線反應</span><p>{routeText}</p></div>
 
-              {!state.result ? (
-                <div className="choices" aria-label="選擇行動">
-                  {current.choices.map((choice, index) => (
-                    <button className="choice-card" key={`${current.id}-${index}`} onClick={() => choose(choice, index)}>
+              {!current.ending && <div className="route-note"><span>路線反應</span><p>{routeText}</p></div>}
+              {memoryEcho && <div className="route-note"><span>過往回聲</span><p>{memoryEcho}</p></div>}
+
+              {current.ending ? (
+                <div className="result-card">
+                  <span className="eyebrow">ENDING RECORDED IN COOKIE</span>
+                  <h3>{current.endingCode}</h3>
+                  <p>這是目前選擇路徑的結局。其他分支不會經過這裡；重新開始後選擇不同根節點，會進入另一套故事。</p>
+                  <button className="primary-button" onClick={() => setShowRestart(true)}>探索其他結局 <span>↻</span></button>
+                </div>
+              ) : !state.result ? (
+                <div className="choices" aria-label="選擇下一個故事節點">
+                  {current.choices.map((choiceData, index) => (
+                    <button className="choice-card" key={`${current.id}-${index}`} onClick={() => choose(choiceData, index)}>
                       <span className="choice-index">0{index + 1}</span>
-                      <span className="choice-icon">{choice.icon}</span>
-                      <span className="choice-label">{choice.label}</span>
+                      <span className="choice-icon">{choiceData.icon}</span>
+                      <span className="choice-label">{choiceData.label}</span>
                       <span className="choice-arrow">→</span>
                     </button>
                   ))}
                 </div>
               ) : (
                 <div className="result-card">
-                  <span className="eyebrow">CHOICE RECORDED IN COOKIE</span>
-                  <h3>選擇留下了痕跡</h3>
-                  <p>{state.result}</p>
-                  <button className="primary-button" onClick={advance}>前往下一幕 <span>→</span></button>
+                  <span className="eyebrow">BRANCH SELECTED / COOKIE SAVED</span>
+                  <h3>這個選擇已改變故事路徑</h3>
+                  <p>{state.result.text}</p>
+                  <button className="primary-button" onClick={advance}>進入對應分支 <span>→</span></button>
                 </div>
               )}
             </article>
@@ -272,10 +342,10 @@ export default function Game() {
               <span className="eyebrow">PLAYER</span>
               <div className="avatar">Z<span>{loops > 0 ? loops : ""}</span></div>
               <h3>{routeLabel(route)}</h3>
-              <p>重啟次數：{loops} · 選擇數：{state.choices.length}</p>
+              <p>重啟：{loops} · 路徑深度：{state.history.length}</p>
             </div>
             <div className="status-card">
-              <div className="status-heading"><h3>精神傾向</h3><span>會影響敘事</span></div>
+              <div className="status-heading"><h3>精神傾向</h3><span>影響交會節點</span></div>
               {Object.entries(STAT_META).map(([key, meta]) => (
                 <div className="stat-row" key={key}>
                   <span>{meta.icon} {meta.label}</span>
@@ -292,32 +362,41 @@ export default function Game() {
             </div>
             <div className="status-card live-card">
               <span className="live-dot" />
-              <div><strong>故事仍在生長</strong><p>GitHub 每小時生成一幕，Vercel 自動部署。</p></div>
+              <div><strong>故事樹仍在生長</strong><p>每小時新增三個不同節點，舊路線可在後方交織。</p></div>
             </div>
           </aside>
         </div>
       ) : null}
 
-      <footer><span>存檔方式：Browser Cookie</span><span>版本：{generated.length ? `LIVE +${generated.length}` : "CORE"}</span></footer>
+      <footer>
+        <span>存檔：Browser Cookie · 節點：{state.currentNodeId}</span>
+        <span>核心 {CORE_NODES.length} 節點 · LIVE +{generated.nodes.length}</span>
+      </footer>
 
       {showRestart && (
         <div className="modal-backdrop" onClick={() => setShowRestart(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <span className="eyebrow">RESET THE LOOP</span><h2>確定重新開始？</h2>
-            <p>目前選擇、能力與物品會清空，但世界會記得你曾經重來。</p>
-            <div className="modal-actions"><button className="ghost-button" onClick={() => setShowRestart(false)}>取消</button><button className="danger-button solid" onClick={restart}>重啟迴圈</button></div>
+          <div className="modal" onClick={(event) => event.stopPropagation()}>
+            <span className="eyebrow">RESET THE STORY TREE</span><h2>回到根節點？</h2>
+            <p>目前路徑、能力與物品會清空。重啟次數會保留，部分彩蛋會因此改變。</p>
+            <div className="modal-actions"><button className="ghost-button" onClick={() => setShowRestart(false)}>取消</button><button className="danger-button solid" onClick={restart}>重新選擇第一條路</button></div>
           </div>
         </div>
       )}
 
       {showArchive && (
         <div className="modal-backdrop" onClick={() => setShowArchive(false)}>
-          <div className="modal archive-modal" onClick={(e) => e.stopPropagation()}>
-            <span className="eyebrow">JOURNEY ARCHIVE</span><h2>旅程紀錄</h2>
+          <div className="modal archive-modal" onClick={(event) => event.stopPropagation()}>
+            <span className="eyebrow">BRANCH HISTORY</span><h2>路徑紀錄</h2>
             <p>選擇序列：{state.choices || "尚未選擇"}</p>
-            <div className="archive-grid"><div><strong>{state.flagCount || state.flags.length}</strong><span>隱藏旗標</span></div><div><strong>{state.itemCount || state.items.length}</strong><span>特殊物品</span></div><div><strong>{loops}</strong><span>重啟次數</span></div></div>
-            <div className="flag-list">{state.flags.length ? state.flags.map((flag) => <code key={flag}>{flag}</code>) : <span>尚未觸發隱藏事件。</span>}</div>
-            <button className="primary-button" onClick={() => setShowArchive(false)}>回到故事</button>
+            <div className="archive-grid"><div><strong>{state.flagCount || state.flags.length}</strong><span>分支旗標</span></div><div><strong>{state.itemCount || state.items.length}</strong><span>特殊物品</span></div><div><strong>{state.history.length}</strong><span>經過節點</span></div></div>
+            <div className="flag-list">
+              {state.history.map((nodeId, index) => {
+                const resolvedId = resolveNodeId(nodeId);
+                const label = nodeMap.get(resolvedId)?.title || nodeId;
+                return <code key={`${nodeId}-${index}`}>{index + 1}. {label}</code>;
+              })}
+            </div>
+            <button className="primary-button" onClick={() => setShowArchive(false)}>回到目前分支</button>
           </div>
         </div>
       )}
