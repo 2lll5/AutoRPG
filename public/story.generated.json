@@ -1,25 +1,149 @@
 {
-  "generatedAt": "2026-07-14T06:00:00.000Z",
+  "schema": 2,
+  "generatedAt": "2026-07-14T07:00:00.000Z",
   "finalized": false,
-  "episodes": [
+  "entrypoints": {
+    "nerve": "live-20260714-15-nerve",
+    "insight": "live-20260714-15-insight",
+    "empathy": "live-20260714-15-empathy"
+  },
+  "nodes": [
     {
-      "id": "hour-20260714-14",
-      "releaseAt": "2026-07-14T14:00:00+08:00",
-      "title": "時隙 001：倒著下雪的月台",
-      "subtitle": "第一段由整點生成的記憶已經抵達。",
-      "scene": "station",
-      "accent": "cyan",
-      "intro": "整點之後，城市多出一座地圖上不存在的月台。雪從地面飛回天空，列車廣播反覆播送你的下一個選擇。月台盡頭站著一名提燈人，手中的火焰照不出任何影子。",
+      "id": "live-20260714-15-nerve",
+      "route": "nerve",
+      "releaseAt": "2026-07-14T15:00:00+08:00",
+      "title": "時隙 001 · 破界：被戰鼓包圍的斷橋",
+      "subtitle": "同一整點另外生成了觀測與守名節點；它們不是這一幕的換皮版本。",
+      "scene": "nerve-20260714-15",
+      "accent": "rose",
+      "intro": "你沿紅門抵達斷橋。橋下不是河，而是被玩家放棄的城市版本。背著碎鐘的傭兵要求你在橋崩塌前決定：征服、解析，或救走橋下的人。",
       "routeText": {
-        "nerve": "提燈人把車票撕成兩半，像是在邀請你用力量補上缺口。",
-        "insight": "廣播每重複一次，句尾就少一個字；消失的字能拼成一組座標。",
-        "empathy": "候車椅上坐著看不見的人，他們只在你閉眼時啜泣。",
-        "balanced": "Bug獸對三條軌道同時低吼，這次沒有明顯安全的方向。"
+        "nerve": "傭兵已把你視為同類；先動手會得到道路，也會失去退路。",
+        "insight": "橋的裂縫按照選擇序列排列，能被重新編譯。",
+        "empathy": "橋下的人仍記得米菈與其他被刪角色。",
+        "balanced": "三個選項會分別前往下一小時的破界、觀測與守名節點。"
+      },
+      "echoes": {
+        "remember_mira": "橋下有人喊出米菈的名字；她在另一條路留下的記憶穿越到這裡。",
+        "bugbeast_friend": "Bug獸咬住即將斷裂的纜線，替你爭取一次選擇的時間。"
       },
       "choices": [
-        { "label": "跳上尚未停穩的黑色列車", "icon": "⚡", "result": "你抓住車門，卻發現列車裡每個乘客都是做出不同選擇的你。他們讓出一個座位，但沒有人願意說終點站在哪。", "effects": { "nerve": 2, "insight": 0, "empathy": 0 }, "flag": "black_train" },
-        { "label": "依照消失的字追查隱藏座標", "icon": "⌘", "result": "座標指向月台正下方。你挖出一只封存的時鐘，裡面少了一個小時，而那正是這座城市從歷史中消失的時間。", "effects": { "nerve": 0, "insight": 2, "empathy": 0 }, "item": "失竊的一小時" },
-        { "label": "坐到空椅旁，聽完那些哭聲", "icon": "✦", "result": "看不見的乘客逐一說出未能完成的告別。當最後一句話結束，倒飛的雪停在半空，為你讓出一條溫暖的路。", "effects": { "nerve": 0, "insight": 0, "empathy": 2 }, "flag": "heard_platform_ghosts" }
+        {
+          "label": "擊敗傭兵，奪取斷橋控制權",
+          "icon": "⚡",
+          "result": "你贏下斷橋，卻被下一座城市標記為入侵者。故事將沿破界分支繼續。",
+          "next": "live-20260714-16-nerve",
+          "effects": { "nerve": 2, "insight": 0, "empathy": 0 },
+          "flag": "live_bridge_conquered"
+        },
+        {
+          "label": "解析裂縫，讓橋改寫自己的終點",
+          "icon": "⌘",
+          "result": "你把斷橋改造成一段可驗證的程式，進入下一個觀測節點。",
+          "next": "live-20260714-16-insight",
+          "effects": { "nerve": 0, "insight": 2, "empathy": 0 },
+          "item": "斷橋差異檔"
+        },
+        {
+          "label": "放棄橋面，先救出下方的舊世界居民",
+          "icon": "✦",
+          "result": "你失去最短道路，卻讓一整條被刪支線恢復姓名，轉入守名節點。",
+          "next": "live-20260714-16-empathy",
+          "effects": { "nerve": 0, "insight": 0, "empathy": 2 },
+          "flag": "live_saved_bridge_world"
+        }
+      ]
+    },
+    {
+      "id": "live-20260714-15-insight",
+      "route": "insight",
+      "releaseAt": "2026-07-14T15:00:00+08:00",
+      "title": "時隙 001 · 觀測：只收藏錯誤答案的博物館",
+      "subtitle": "這條故事只會由藍門或上一層的觀測選擇抵達。",
+      "scene": "insight-20260714-15",
+      "accent": "cyan",
+      "intro": "博物館展出每一個看似錯誤、卻曾救下一條時間線的答案。胸口刻著提交雜湊的工程師告訴你，正確答案已被人替換，而替換者可能就是未來的 Z。",
+      "routeText": {
+        "nerve": "你可以摧毀展櫃，逼真正答案現身。",
+        "insight": "所有錯誤答案的雜湊合起來，正好指向下一個節點。",
+        "empathy": "每個答案背後都有一個因選錯而被刪除的人。",
+        "balanced": "下一步可留在觀測路線，也可交叉進入破界或守名路線。"
+      },
+      "echoes": {
+        "deleted_identity": "博物館無法辨認你，因此顯示了原本只供維護者查看的展品。",
+        "entered_live_insight": "規則鏡片讓你看見三個出口各自真正的節點 ID。"
+      },
+      "choices": [
+        {
+          "label": "砸碎主展櫃，逼替換者出面",
+          "icon": "⚡",
+          "result": "替換者逃向戰鬥路線；你追進下一個破界節點。",
+          "next": "live-20260714-16-nerve",
+          "effects": { "nerve": 2, "insight": 0, "empathy": 0 },
+          "flag": "live_broke_museum"
+        },
+        {
+          "label": "重建正確問題，而不是尋找正確答案",
+          "icon": "⌘",
+          "result": "博物館承認問題才是被竄改的部分，將你送往下一個觀測節點。",
+          "next": "live-20260714-16-insight",
+          "effects": { "nerve": 0, "insight": 2, "empathy": 0 },
+          "item": "原始問題"
+        },
+        {
+          "label": "讓每個錯誤答案說出它救過誰",
+          "icon": "✦",
+          "result": "答案化成人名，替你打開下一個守名節點。",
+          "next": "live-20260714-16-empathy",
+          "effects": { "nerve": 0, "insight": 0, "empathy": 2 },
+          "flag": "live_heard_wrong_answers"
+        }
+      ]
+    },
+    {
+      "id": "live-20260714-15-empathy",
+      "route": "empathy",
+      "releaseAt": "2026-07-14T15:00:00+08:00",
+      "title": "時隙 001 · 守名：會夢見玩家的地下湖",
+      "subtitle": "這一幕保存的是其他兩條路沒有聽見的聲音。",
+      "scene": "empathy-20260714-15",
+      "accent": "violet",
+      "intro": "地下湖的水面映出玩家每次按下重新開始時，被留在舊世界的人。替無名者提燈的米菈站在湖心，問你願意救一個人、理解整座湖，還是讓湖自行決定。",
+      "routeText": {
+        "nerve": "湖中有東西正拖走米菈；力量能救她，但可能驚醒所有舊世界。",
+        "insight": "夢境的波紋遵守可解析的重啟規律。",
+        "empathy": "每一道波紋都是一個從未被聽完的告別。",
+        "balanced": "選擇會前往下一個不同節點，不會回到共同章節。"
+      },
+      "echoes": {
+        "remember_mira": "米菈認出你是少數仍記得她名字的玩家，說出一段額外真相。",
+        "entered_live_empathy": "白門護送來的無名者已在湖邊替你點亮一排燈。"
+      },
+      "choices": [
+        {
+          "label": "跳入湖底，與拖走米菈的怪物戰鬥",
+          "icon": "⚡",
+          "result": "你救回米菈，卻驚醒一支由舊世界組成的軍隊，轉入破界節點。",
+          "next": "live-20260714-16-nerve",
+          "effects": { "nerve": 2, "insight": 0, "empathy": 0 },
+          "flag": "live_fought_lake"
+        },
+        {
+          "label": "解析湖面波紋，找出重啟共同模式",
+          "icon": "⌘",
+          "result": "你找到能辨認每次重啟來源的公式，進入下一個觀測節點。",
+          "next": "live-20260714-16-insight",
+          "effects": { "nerve": 0, "insight": 2, "empathy": 0 },
+          "item": "湖面重啟公式"
+        },
+        {
+          "label": "讓舊世界居民輪流完成最後一句話",
+          "icon": "✦",
+          "result": "湖水逐漸變清，所有完成告別的人替你開啟下一個守名節點。",
+          "next": "live-20260714-16-empathy",
+          "effects": { "nerve": 0, "insight": 0, "empathy": 2 },
+          "flag": "live_finished_goodbyes"
+        }
       ]
     }
   ]
